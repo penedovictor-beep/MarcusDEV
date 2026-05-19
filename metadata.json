@@ -1,0 +1,6 @@
+{
+  "name": "Vitalis Hub",
+  "description": "Gerador de prompts e simulador interativo de app de saúde com monitoramento cardíaco, alarmes de remédios e lembretes saudáveis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
