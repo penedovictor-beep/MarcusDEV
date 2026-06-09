@@ -497,16 +497,16 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 text-slate-350">
+    <div className="w-full flex flex-col gap-6 text-slate-600">
       
       {/* Top Banner Control Center */}
-      <div className="w-full p-5 bg-[#0e0e12]/90 border border-slate-800/80 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl backdrop-blur relative">
+      <div className="w-full p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm relative">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-            <Watch className="w-5 h-5 text-indigo-400 animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+            <Watch className="w-5 h-5 text-indigo-600 animate-pulse" />
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-1.5 leading-none mb-1">
+          <div className="text-left">
+            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 leading-none mb-1">
               Painel de Integração de Wearables
             </h2>
             <div className="flex items-center gap-2">
@@ -514,11 +514,11 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
               <select
                 value={wearableState}
                 onChange={(e) => setWearableState(e.target.value as WearableStatus)}
-                className="text-xs font-bold text-rose-400 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 outline-none cursor-pointer focus:border-rose-500"
+                className="text-xs font-bold text-rose-600 bg-white border border-slate-200 rounded px-1.5 py-0.5 outline-none cursor-pointer focus:border-rose-500"
               >
-                <option value="Aparelho Conectado" className="bg-slate-950 text-slate-300">🟢 Conectado (BLE Active)</option>
-                <option value="Conectando..." className="bg-slate-950 text-slate-300">🟡 Pareando...</option>
-                <option value="Desconectado" className="bg-slate-950 text-slate-300">🔴 Desconectado</option>
+                <option value="Aparelho Conectado" className="bg-white text-slate-700">🟢 Conectado (BLE Active)</option>
+                <option value="Conectando..." className="bg-white text-slate-700">🟡 Pareando...</option>
+                <option value="Desconectado" className="bg-white text-slate-700">🔴 Desconectado</option>
               </select>
             </div>
           </div>
@@ -526,14 +526,14 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Smartwatch Battery Indicator */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 font-mono">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-150 px-3 py-1.5 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-500 font-mono">
               🔋 Smartwatch: {battery}%
             </span>
             <button
               onClick={() => setBattery(100)}
               title="Recarregar Bateria"
-              className="p-1 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+              className="p-1 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-650"
             >
               <RefreshCw className="w-3 h-3" />
             </button>
@@ -543,9 +543,9 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSyncPanel(!showSyncPanel)}
-              className="text-xs font-bold text-indigo-300 bg-indigo-505/10 hover:bg-indigo-505/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+              className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
             >
-              <Database className="w-3.5 h-3.5 text-indigo-400" />
+              <Database className="w-3.5 h-3.5 text-indigo-500" />
               <span>Conector Cloud SQL</span>
               {syncStatus === "success" && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
               {syncStatus === "error" && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>}
@@ -561,56 +561,56 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="w-full bg-[#0a0a0f] border border-indigo-500/25 p-5 rounded-2xl flex flex-col gap-4 text-left shadow-lg overflow-hidden"
+          className="w-full bg-white border border-indigo-200 p-5 rounded-2xl flex flex-col gap-4 text-left shadow-md overflow-hidden text-slate-600"
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-indigo-400" />
-              <h3 className="text-xs font-bold font-mono text-indigo-300 uppercase tracking-widest">Configuração do Banco Secundário cloud</h3>
+              <Database className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-xs font-bold font-mono text-indigo-700 uppercase tracking-widest">Configuração do Banco Secundário cloud</h3>
             </div>
             <button
               onClick={fetchSupabaseData}
               disabled={syncStatus === "syncing"}
-              className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-505/20 text-emerald-400 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3 h-3 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
               <span>Sincronizar Cloud SQL</span>
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <p className="text-xs text-slate-500 leading-relaxed">
             O portal está programado com um fallback sandbox local para que você teste à vontade. Para habilitar a escrita na nuvem do Supabase, copie o script abaixo e rode-o no seu terminal SQL.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs font-mono space-y-1.5">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-150 text-xs font-mono space-y-1.5 text-slate-700">
               <div className="flex justify-between">
-                <span className="text-slate-500">DATABASE URL:</span>
-                <span className="text-slate-300 break-all select-all">https://vsggnechqtuyknekebmf.supabase.co</span>
+                <span className="text-slate-450">DATABASE URL:</span>
+                <span className="text-slate-800 break-all select-all font-semibold">https://vsggnechqtuyknekebmf.supabase.co</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">ANON KEY:</span>
-                <span className="text-slate-300 truncate max-w-[150px] select-all">sb_publishable_HsOeEfZkGh2elTo2ZWYGZw_trhuU9A3</span>
+                <span className="text-slate-450">ANON KEY:</span>
+                <span className="text-slate-800 truncate max-w-[150px] select-all font-semibold">sb_publishable_HsOeEfZkGh2elTo2ZWYGZw_trhuU9A3</span>
               </div>
-              <div className="flex justify-between border-t border-slate-900 pt-2 mt-2">
-                <span className="text-slate-500">STATUS:</span>
-                <span className={`font-bold uppercase ${syncStatus === "success" ? "text-emerald-400" : "text-amber-400 animate-pulse"}`}>
+              <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
+                <span className="text-slate-450">STATUS:</span>
+                <span className={`font-bold uppercase ${syncStatus === "success" ? "text-emerald-600" : "text-amber-600 animate-pulse"}`}>
                   {syncStatus === "success" ? "Sincronizado na Nuvem" : "Modo Sandbox (Tabelas pendentes)"}
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-xl flex flex-col justify-between gap-3">
+            <div className="bg-slate-50/50 border border-slate-200/80 p-4 rounded-xl flex flex-col justify-between gap-3">
               <div className="space-y-1">
-                <span className="text-[10px] text-indigo-400 font-bold uppercase font-mono">Criação das Tabelas no Database Cloud</span>
-                <p className="text-[11px] text-slate-400">
+                <span className="text-[10px] text-indigo-600 font-bold uppercase font-mono">Criação das Tabelas no Database Cloud</span>
+                <p className="text-[11px] text-slate-500">
                   Execute o script SQL para as tabelas `medications`, `food_logs` e `water_logs` estarem integradas ao seu back-end.
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleCopySql}
-                  className="flex-1 py-2 px-3 text-xs bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow"
+                  className="flex-1 py-2 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow"
                 >
                   <Copy className="w-4 h-4" />
                   <span>{sqlCopied ? "Copiado!" : "Copiar Script SQL"}</span>
@@ -619,7 +619,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                   href="https://supabase.com/dashboard"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2 px-3 text-xs border border-slate-800 hover:border-slate-700 hover:bg-slate-900 text-slate-300 font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
+                  className="py-2 px-3 text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>Supabase Dashboard</span>
@@ -634,38 +634,38 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch">
         
         {/* Heartbeat sensor widget - Bento Card 5 cols */}
-        <div className="lg:col-span-5 bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-rose-500/[0.015] rounded-full blur-3xl pointer-events-none"></div>
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-slate-300 flex flex-col justify-between transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-rose-500/[0.01] rounded-full blur-3xl pointer-events-none"></div>
           
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-rose-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
-                <Heart className={`w-4 h-4 text-rose-500 ${bpm > 0 ? "animate-pulse" : ""} fill-rose-500`} />
+              <span className="text-xs font-semibold text-rose-600 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Heart className={`w-4 h-4 text-rose-500 ${bpm > 0 ? "animate-pulse" : ""} fill-rose-550`} />
                 <span>Sensor de Batimentos (Frequência)</span>
               </span>
               <span className="text-xs text-slate-500 font-mono font-bold uppercase">{currentTime || "-:-"}</span>
             </div>
 
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <span className="text-6xl font-light text-white tracking-tighter">
+            <div className="flex items-baseline gap-1.5 mt-2 text-left">
+              <span className="text-6xl font-light text-slate-900 tracking-tighter">
                 {bpm > 0 ? bpm : "---"}
               </span>
-              <span className="text-sm font-bold text-rose-500">BPM</span>
+              <span className="text-sm font-bold text-rose-600">BPM</span>
             </div>
 
-            <div className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+            <div className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 text-left">
               <Activity className="w-4 h-4 text-rose-500" />
               <span>Sinal: {wearableState === "Aparelho Conectado" ? "Excelente (Leitura Real-Time)" : "Pausado (Smartwatch despareado)"}</span>
             </div>
 
             {/* Sparkline live chart display of heartbeat ECG stream */}
-            <div className="h-16 w-full mt-6 bg-slate-950/40 border border-slate-900 rounded-xl p-2 flex items-end gap-[2px]">
+            <div className="h-16 w-full mt-6 bg-slate-50 border border-slate-100 rounded-xl p-2 flex items-end gap-[2px]">
               {chartData.map((val, i) => {
                 const percent = Math.min(Math.max(((val - 45) / 120) * 100, 10), 95);
                 return (
                   <div
                     key={i}
-                    className="flex-1 bg-gradient-to-t from-rose-600/20 to-rose-500/80 hover:to-rose-450 rounded-t transition-all duration-300"
+                    className="flex-1 bg-gradient-to-t from-rose-500/10 to-rose-500/80 hover:to-rose-600 rounded-t transition-all duration-300"
                     style={{ height: `${percent}%` }}
                     title={`BPM: ${val}`}
                   />
@@ -675,8 +675,8 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           </div>
 
           {/* Activity preset select toggles */}
-          <div className="mt-6 pt-5 border-t border-slate-900/80">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono block mb-2">
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono block mb-2 text-left">
               Mudar Atividade Relacionada (Simulador):
             </span>
             <div className="grid grid-cols-2 gap-2">
@@ -684,14 +684,14 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                 <button
                   key={p.name}
                   onClick={() => setActivePreset(p.name)}
-                  className={`text-xs font-bold px-3 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
+                  className={`text-xs font-bold px-3 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                     activePreset === p.name
-                      ? "bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-sm"
-                      : "bg-slate-900/30 border-slate-800/40 text-slate-400 hover:bg-slate-900 hover:text-white"
+                      ? "bg-rose-50 border-rose-200 text-rose-700 shadow-sm"
+                      : "bg-slate-50 border-slate-150 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
                   }`}
                 >
                   <span>{p.name}</span>
-                  <span className="text-[10px] text-slate-500 font-mono font-semibold">
+                  <span className="text-[10px] text-slate-400 font-mono font-semibold">
                     {p.range[0]}-{p.range[1]}
                   </span>
                 </button>
@@ -701,33 +701,33 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
         </div>
 
         {/* Hydration tracking cyclical management - Bento Card 7 cols */}
-        <div className="lg:col-span-7 bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/[0.015] rounded-full blur-3xl pointer-events-none"></div>
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-slate-300 flex flex-col justify-between transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/[0.01] rounded-full blur-3xl pointer-events-none"></div>
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
-                <Droplet className="w-4 h-4 text-indigo-400 animate-bounce" />
+              <span className="text-xs font-semibold text-indigo-600 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Droplet className="w-4 h-4 text-indigo-500 animate-bounce" />
                 <span>Registro de Hidratação Diária</span>
               </span>
               <span className="text-xs text-slate-500 font-mono font-bold uppercase">Consumo Ideal</span>
             </div>
 
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <span className="text-6xl font-light text-white tracking-tighter">
+            <div className="flex items-baseline gap-1.5 mt-2 text-left">
+              <span className="text-6xl font-light text-slate-900 tracking-tighter">
                 {waterIntake >= 1000 ? `${(waterIntake / 1000).toFixed(2)}` : `${waterIntake}`}
-                {waterIntake >= 1000 ? <span className="text-xl font-bold ml-1 text-indigo-400">Litros</span> : <span className="text-xl font-bold ml-1 text-indigo-400">ml</span>}
+                {waterIntake >= 1000 ? <span className="text-xl font-bold ml-1 text-indigo-600">Litros</span> : <span className="text-xl font-bold ml-1 text-indigo-600">ml</span>}
               </span>
               <span className="text-xs text-slate-400 font-medium">/ 2.50L Meta Mínima</span>
             </div>
 
             {/* Custom high-end interactive progress bar waves */}
-            <div className="w-full bg-slate-950 h-6 rounded-2xl overflow-hidden relative border border-slate-900 flex items-center justify-center my-6 shadow-inner">
+            <div className="w-full bg-slate-100 h-6 rounded-2xl overflow-hidden relative border border-slate-200/60 flex items-center justify-center my-6">
               <div
-                className="bg-gradient-to-r from-indigo-650 to-indigo-500 h-full absolute left-0 bottom-0 top-0 transition-all duration-300 rounded-2xl"
+                className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full absolute left-0 bottom-0 top-0 transition-all duration-350 rounded-2xl"
                 style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%` }}
               />
-              <span className="z-10 text-xs font-extrabold text-blue-100 uppercase tracking-wider font-mono">
+              <span className="z-10 text-xs font-extrabold text-indigo-950 uppercase tracking-wider font-mono">
                 {Math.round((waterIntake / waterGoal) * 100)}% Consumidos
               </span>
             </div>
@@ -736,21 +736,21 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
             <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => handleAddWater(150)}
-                className="py-3 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-indigo-300 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 focus:border-indigo-500"
+                className="py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 cursor-pointer"
               >
                 <span className="text-xs">💧</span>
                 <span>+150 ml</span>
               </button>
               <button
                 onClick={() => handleAddWater(250)}
-                className="py-3 bg-indigo-550/10 hover:bg-slate-900 border border-indigo-500/20 text-indigo-200 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 focus:border-indigo-500"
+                className="py-3 bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-150 text-indigo-700 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 cursor-pointer"
               >
                 <span className="text-xs">🥤</span>
                 <span>+250 ml</span>
               </button>
               <button
                 onClick={() => handleAddWater(500)}
-                className="py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 shadow"
+                className="py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 cursor-pointer shadow-sm"
               >
                 <span className="text-xs text-blue-200">🌊</span>
                 <span>+500 ml</span>
@@ -759,13 +759,13 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           </div>
 
           {/* Test reminder triggers */}
-          <div className="mt-5 pt-4 border-t border-slate-900/80 flex flex-col sm:flex-row items-center gap-3">
+          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3">
             <p className="text-[11px] text-slate-500 font-medium text-left">
               Quer testar como o aplicativo móvel reage a alertas em background?
             </p>
             <button
               onClick={triggerWaterReminderSim}
-              className="w-full sm:w-auto px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+              className="w-full sm:w-auto px-4 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 hover:text-indigo-800 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
             >
               <Bell className="w-3.5 h-3.5" />
               <span>Disparar Lembrete Push</span>
@@ -779,14 +779,14 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         
         {/* Prescription medication scheduling ledger */}
-        <div className="bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-slate-300 flex flex-col justify-between transition-all">
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-900/80">
-              <span className="text-xs font-semibold text-amber-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-widest font-mono flex items-center gap-1.5">
                 <span>💊</span>
                 <span>Agenda de Medicamentos do Dia</span>
               </span>
-              <span className="text-[11px] font-extrabold px-2.5 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-lg uppercase tracking-wide">
+              <span className="text-[11px] font-extrabold px-2.5 py-1 bg-amber-50 border border-amber-200/60 text-amber-800 rounded-lg uppercase tracking-wide">
                 {meds.filter(m => !m.taken).length} Pendentes hoje
               </span>
             </div>
@@ -794,34 +794,34 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
             {/* List and toggle checks */}
             <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto no-scrollbar pr-1">
               {meds.length === 0 ? (
-                <p className="text-xs text-slate-500 py-6 text-center">Nenhum medicamento agendado.</p>
+                <p className="text-xs text-slate-450 py-6 text-center">Nenhum medicamento agendado.</p>
               ) : (
                 meds.map((med) => (
                   <div
                     key={med.id}
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
                       med.taken
-                        ? "bg-slate-950/30 border-slate-900 opacity-55"
-                        : "bg-amber-500/[0.03] border-amber-500/15"
-                    }`}
+                        ? "bg-slate-50/70 border-slate-100 opacity-60"
+                        : "bg-amber-500/[0.02]/30 border-slate-200/80 shadow-sm"
+                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => toggleMed(med.id)}
-                        className={`w-6 h-6 rounded-xl border flex items-center justify-center transition-all ${
+                        className={`w-6 h-6 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
                           med.taken
-                            ? "bg-emerald-500 border-emerald-600 text-white"
-                            : "border-slate-700 bg-slate-950 text-slate-350 hover:border-amber-500"
+                            ? "bg-emerald-555 border-emerald-666 text-white bg-emerald-500"
+                            : "border-slate-300 bg-white text-slate-400 hover:border-amber-500"
                         }`}
                       >
                         {med.taken && <Check className="w-3.5 h-3.5 text-white" />}
                       </button>
                       <div className="text-left">
-                        <p className={`text-xs font-bold leading-none mb-1 ${med.taken ? "line-through text-slate-500" : "text-slate-200"}`}>
+                        <p className={`text-xs font-bold leading-none mb-1 ${med.taken ? "line-through text-slate-400" : "text-slate-800"}`}>
                           {med.name}
                         </p>
-                        <p className="text-[10px] text-slate-400">
-                          Dosagem: <span className="text-slate-350 font-semibold">{med.dosage}</span> · Horário: <span className="font-semibold text-amber-400 tracking-wide font-mono">{med.time}</span>
+                        <p className="text-[10px] text-slate-500">
+                          Dosagem: <span className="text-slate-700 font-semibold">{med.dosage}</span> · Horário: <span className="font-semibold text-amber-650 tracking-wide font-mono">{med.time}</span>
                         </p>
                       </div>
                     </div>
@@ -830,7 +830,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                       <button
                         onClick={() => triggerMedAlarmSim(med)}
                         title="Simular Notificação do Medicamento"
-                        className="p-1 px-2 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/10 hover:border-amber-500/30 hover:bg-amber-500/15 rounded-lg transition-all flex items-center gap-1.5"
+                        className="p-1 px-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                       >
                         <Bell className="w-3 h-3" />
                         <span>Notificar</span>
@@ -838,7 +838,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                       <button
                         onClick={() => deleteMed(med.id)}
                         title="Remover Registro"
-                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-900 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -850,8 +850,8 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           </div>
 
           {/* New medication alarm forms */}
-          <form onSubmit={handleAddMed} className="p-3 border border-dashed border-slate-800 rounded-2xl bg-slate-950/20 flex flex-col gap-3 mt-4 text-left">
-            <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase font-mono block">Cadastrar Novo Medicamento Clínico:</span>
+          <form onSubmit={handleAddMed} className="p-3 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col gap-3 mt-4 text-left">
+            <span className="text-[10px] font-bold text-slate-450 tracking-wider uppercase font-mono block">Cadastrar Novo Medicamento Clínico:</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400">Nome do Remédio</label>
@@ -861,7 +861,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                   placeholder="Ex: Ácido Fólico"
                   value={newMedName}
                   onChange={(e) => setNewMedName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-amber-500 placeholder-slate-400 font-semibold"
                 />
               </div>
               <div className="space-y-1">
@@ -872,7 +872,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                   placeholder="Ex: 50mg - 1 comprimido"
                   value={newMedDosage}
                   onChange={(e) => setNewMedDosage(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-amber-500 placeholder-slate-400 font-semibold"
                 />
               </div>
             </div>
@@ -885,7 +885,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                   required
                   value={newMedTime}
                   onChange={(e) => setNewMedTime(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none font-mono font-semibold focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none font-mono font-semibold focus:border-amber-500"
                 />
               </div>
               <button
@@ -900,28 +900,28 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
         </div>
 
         {/* Nutritional meal logging widget */}
-        <div className="bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-slate-300 flex flex-col justify-between transition-all">
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-900/80">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
-                <Coffee className="w-4 h-4 text-emerald-400" />
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Coffee className="w-4 h-4 text-emerald-500" />
                 <span>Registro Alimentar & Dieta</span>
               </span>
               <div className="text-right">
-                <span className="text-xs text-slate-400">Meta Calórica: </span>
-                <span className="text-xs font-bold font-mono text-emerald-400">{totalCalories} / {dailyCalorieGoal} kcal</span>
+                <span className="text-xs text-slate-450">Meta Calórica: </span>
+                <span className="text-xs font-bold font-mono text-emerald-600">{totalCalories} / {dailyCalorieGoal} kcal</span>
               </div>
             </div>
 
             {/* Calories visual progress gauge ring */}
             <div className="space-y-1 text-left">
-              <div className="flex justify-between text-[11px] font-mono text-slate-500 font-bold">
+              <div className="flex justify-between text-[11px] font-mono text-slate-400 font-bold">
                 <span>PROGRESSO DIÁRIO</span>
                 <span>{Math.round((totalCalories / dailyCalorieGoal) * 100)}%</span>
               </div>
-              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-900 shadow-inner">
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/80">
                 <div
-                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-emerald-555 to-emerald-444 h-full rounded-full transition-all duration-300 bg-emerald-500"
                   style={{ width: `${Math.min((totalCalories / dailyCalorieGoal) * 100, 100)}%` }}
                 />
               </div>
@@ -930,29 +930,29 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
             {/* List meal records */}
             <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto no-scrollbar pr-1">
               {foodLogs.length === 0 ? (
-                <p className="text-xs text-slate-555 py-4 text-center">Nenhum log inserido hoje.</p>
+                <p className="text-xs text-slate-450 py-4 text-center">Nenhum log inserido hoje.</p>
               ) : (
                 foodLogs.map((log) => (
-                  <div key={log.id} className="flex justify-between items-center p-3 rounded-2xl bg-slate-950/40 border border-slate-900 hover:border-slate-850 transition-all duration-150">
+                  <div key={log.id} className="flex justify-between items-center p-3 rounded-2xl bg-slate-50 border border-slate-150 hover:border-slate-200 transition-all duration-150">
                     <div className="text-left">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-black px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded font-sans uppercase tracking-wide">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded font-sans uppercase tracking-wide">
                           {log.mealType}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">{log.time}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{log.time}</span>
                       </div>
-                      <p className="text-xs font-medium text-slate-200 line-clamp-1">
+                      <p className="text-xs font-medium text-slate-800 line-clamp-1">
                         {log.description}
                       </p>
                     </div>
                     
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs font-black font-mono text-slate-300 whitespace-nowrap">
+                      <span className="text-xs font-black font-mono text-slate-700 whitespace-nowrap">
                         {log.calories} kcal
                       </span>
                       <button
                         onClick={() => handleDeleteFood(log.id, log.calories, log.mealType)}
-                        className="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                         title="Deletar refeição"
                       >
                         <X className="w-4 h-4" />
@@ -965,9 +965,9 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
           </div>
 
           {/* Food adding form */}
-          <form onSubmit={handleAddFood} className="p-3 border border-dashed border-slate-800 rounded-2xl bg-slate-950/20 flex flex-col gap-3 mt-4 text-left">
+          <form onSubmit={handleAddFood} className="p-3 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col gap-3 mt-4 text-left">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase font-mono block">Logar Nova Refeição Ativa:</span>
+              <span className="text-[10px] font-bold text-slate-450 tracking-wider uppercase font-mono block">Logar Nova Refeição Ativa:</span>
               
               <div className="flex gap-1 font-sans">
                 {(["Café", "Almoço", "Jantar", "Lanche"] as const).map((type) => (
@@ -977,8 +977,8 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                     onClick={() => setFoodType(type)}
                     className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
                       foodType === type
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-white border border-slate-250 text-slate-550 hover:bg-slate-100 border-slate-200"
                     }`}
                   >
                     {type}
@@ -994,7 +994,7 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                 placeholder="Ex: Omelete de clara e ricota"
                 value={foodDesc}
                 onChange={(e) => setFoodDesc(e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+                className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-emerald-555 focus:border-emerald-500 font-semibold placeholder-slate-400"
               />
               <div className="flex gap-2">
                 <input
@@ -1003,11 +1003,11 @@ CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USI
                   placeholder="Kcal"
                   value={foodCalories}
                   onChange={(e) => setFoodCalories(Number(e.target.value))}
-                  className="w-20 px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none font-mono font-semibold focus:border-emerald-500"
+                  className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-850 outline-none font-mono font-semibold focus:border-emerald-500 text-slate-800"
                 />
                 <button
                   type="submit"
-                  className="px-5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all font-mono uppercase tracking-wider cursor-pointer shadow-sm"
+                  className="px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all font-mono uppercase tracking-wider cursor-pointer shadow-sm animate-pulse"
                 >
                   Reg
                 </button>

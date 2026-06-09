@@ -223,15 +223,15 @@ const styles = StyleSheet.create({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur border border-slate-200/60 p-5 rounded-3xl shadow-sm transition-all dark:bg-slate-900/40 dark:border-slate-800">
+    <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-sm transition-all">
       
       {/* Title section */}
-      <div className="flex items-center gap-2 pb-3 mb-5 border-b border-rose-500/10 dark:border-rose-500/10">
-        <div className="p-2 bg-rose-500/10 rounded-xl">
+      <div className="flex items-center gap-2 pb-3 mb-5 border-b border-slate-100">
+        <div className="p-2 bg-rose-50 rounded-xl border border-rose-100">
           <Sparkles className="w-5 h-5 text-rose-500" />
         </div>
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">Oficina de Prompt e Arquitetura</h2>
+        <div className="text-left">
+          <h2 className="text-base font-bold text-slate-900">Oficina de Prompt e Arquitetura</h2>
           <p className="text-xs text-slate-500">Desenhe, customize e gere planos de desenvolvimento nativos React Native</p>
         </div>
       </div>
@@ -240,8 +240,8 @@ const styles = StyleSheet.create({
         
         {/* Left selector options (Option Form) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
-          <div className="bg-slate-50/50 dark:bg-slate-950/20 p-4 border border-slate-200/50 dark:border-slate-800/60 rounded-2xl flex flex-col gap-3">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest flex items-center gap-1">
+          <div className="bg-zinc-50/60 p-4 border border-slate-200 rounded-2xl flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1">
               <Cpu className="w-3.5 h-3.5 text-rose-500" />
               <span>Configuração Mobile</span>
             </h3>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 font-semibold shadow-sm focus:border-rose-550 transition-all cursor-pointer"
               >
                 <option value="Ambas (iOS e Android)">iOS e Android (Híbrido)</option>
                 <option value="Apenas iOS">Apenas iOS (Apple Ecosystem)</option>
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
               <select
                 value={framework}
                 onChange={(e) => setFramework(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 font-semibold shadow-sm focus:border-rose-550 transition-all cursor-pointer"
               >
                 <option value="Expo (TypeScript / SDK 51+)">Expo framework (Recomendado)</option>
                 <option value="Expo + Expo Router v3">Expo Router (Roteamento baseado em arquivos)</option>
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
               <select
                 value={watchApi}
                 onChange={(e) => setWatchApi(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 font-semibold shadow-sm focus:border-rose-550 transition-all cursor-pointer"
               >
                 <option value="Apple HealthKit (iOS) e Google Fit (Android)">HealthKit (iOS) + Google Fit (Android)</option>
                 <option value="Conexão Direta Bluetooth BLE (react-native-ble-plx)">Bluetooth BLE Direto (Smartband Genérica)</option>
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
               <select
                 value={notificationApi}
                 onChange={(e) => setNotificationApi(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 font-semibold shadow-sm focus:border-rose-550 transition-all cursor-pointer"
               >
                 <option value="Notifee + expo-notifications (Híbrido Local e Remoto)">Notifee + expo-notifications (Offline & Online)</option>
                 <option value="Apenas Notifee Local (Para lembretes cíclicos sem internet)">Lembrete com Notifee Offline (Periódico)</option>
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
               <select
                 value={designFlavor}
                 onChange={(e) => setDesignFlavor(e.target.value)}
-                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 font-semibold shadow-sm focus:border-rose-550 transition-all cursor-pointer"
               >
                 <option value="Clean e Minimalista (Interface Clara com Negativa Ampla)">Clean e Minimalista (Modo Claro Premium)</option>
                 <option value="Dark Mode Tecnológico / Brutalista">High-Contrast Dark (Estilo Cyberpunk Neon)</option>
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
                 rows={3}
                 value={extraRequirements}
                 onChange={(e) => setExtraRequirements(e.target.value)}
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg outline-none bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-700 dark:text-slate-300 placeholder-slate-400 resize-none font-medium"
+                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg outline-none bg-white text-slate-700 placeholder-slate-400 resize-none font-medium shadow-sm focus:border-rose-550 transition-all"
               ></textarea>
             </div>
 
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
             </button>
           </div>
 
-          <div className="p-3 bg-zinc-50 border border-slate-200/55 rounded-xl text-[10px] text-slate-400 leading-normal flex items-start gap-2 select-none dark:bg-slate-950/40 dark:border-slate-800/80">
+          <div className="p-3 bg-zinc-50 border border-slate-200/60 rounded-xl text-[10px] text-slate-400 leading-normal flex items-start gap-2 select-none">
             <Info className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
             <span>
               <strong>Dica:</strong> Altere as opções acima e gere. Os resultados mostram um prompt projetado passo a passo e o código de exemplo. Sinta-se à vontade para alterá-los.
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className="w-full h-[400px] bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-slate-200/40 border-dashed dark:border-slate-800 flex flex-col items-center justify-center p-8 text-center"
+                className="w-full h-[400px] bg-slate-50 rounded-2xl border border-slate-200/60 border-dashed flex flex-col items-center justify-center p-8 text-center"
               >
                 <div className="relative">
                   <div className="w-16 h-16 border-4 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>
@@ -388,20 +388,20 @@ const styles = StyleSheet.create({
               >
                 
                 {/* Overview banner */}
-                <div className="p-4 bg-rose-500/[0.02] border border-rose-500/10 rounded-2xl">
-                  <span className="text-[10px] font-bold text-rose-500 tracking-wider uppercase font-mono">Overview da Arquitetura</span>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 antialiased leading-relaxed">
+                <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl text-left">
+                  <span className="text-[10px] font-bold text-rose-600 tracking-wider uppercase font-mono">Overview da Arquitetura</span>
+                  <p className="text-xs text-slate-600 mt-1 antialiased leading-relaxed">
                     {result.overview}
                   </p>
                   {result.isFallback && (
-                    <span className="mt-2 inline-block text-[9px] font-semibold text-slate-400 bg-slate-150 px-2 py-0.5 rounded dark:bg-slate-800">
+                    <span className="mt-2 inline-block text-[9px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                       Modo local offline habilitado · Gemini API não configurada
                     </span>
                   )}
                 </div>
 
                 {/* Tabs selection menu */}
-                <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex border-b border-slate-200 gap-1.5 overflow-x-auto no-scrollbar pb-1 flex-row">
                   
                   {/* Tab 1: AI Prompt */}
                   <button
@@ -525,16 +525,16 @@ const styles = StyleSheet.create({
           </AnimatePresence>
 
           {/* AI Copilot Chat Buddy */}
-          <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-5 mt-2 flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 mt-2 flex flex-col gap-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                  <MessageSquare className="w-4 h-4 text-indigo-400" />
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                  <MessageSquare className="w-4 h-4 text-indigo-600" />
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                <div className="text-left">
+                  <h4 className="text-xs font-bold text-slate-850 flex items-center gap-2">
                     <span>CO-PILOTO IA VITALISYNC</span>
-                    <span className="text-[8px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest font-mono select-none">
+                    <span className="text-[8px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-widest font-mono select-none font-bold">
                       Conectado
                     </span>
                   </h4>
