@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Heart,
@@ -14,15 +14,22 @@ import {
   X,
   Sparkles,
   RefreshCw,
+  Cloud,
+  Database,
+  Copy,
+  AlertTriangle,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Medication, FoodLog, WearableStatus, PushNotification } from "../types";
+import { supabase } from "../lib/supabaseClient";
 
 // Simulated Heart Rate presets based on user activities
 const HEART_PRESETS = [
-  { name: "Repouso", range: [58, 66], color: "text-emerald-500 bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/40" },
-  { name: "Caminhada", range: [92, 104], color: "text-amber-500 bg-amber-50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/40" },
-  { name: "Cardio Intenso", range: [135, 155], color: "text-rose-500 bg-rose-50 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/40" },
-  { name: "Meditação", range: [48, 55], color: "text-sky-500 bg-sky-50 border-sky-100 dark:bg-sky-950/20 dark:border-sky-900/40" },
+  { name: "Repouso", range: [58, 66], color: "emerald", label: "Excelente" },
+  { name: "Caminhada", range: [92, 104], color: "amber", label: "Moderado" },
+  { name: "Cardio Intenso", range: [135, 155], color: "rose", label: "Elevado" },
+  { name: "Meditação", range: [48, 55], color: "sky", label: "Ideal" },
 ];
 
 interface PhoneSimulatorProps {
@@ -42,13 +49,19 @@ export default function PhoneSimulator({
   const [wearableState, setWearableState] = useState<WearableStatus>("Aparelho Conectado");
   const [battery, setBattery] = useState(89);
 
+  // Supabase Sync States
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle");
+  const [syncMessage, setSyncMessage] = useState("");
+  const [showSyncPanel, setShowSyncPanel] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
+
   // Water intake system
   const [waterIntake, setWaterIntake] = useState(1250); // ml
   const [waterGoal] = useState(2500); // ml
 
-  // Food logs
+  // Food logs (Default seed values)
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([
-    { id: "1", time: "08:15", mealType: "Café", description: "Ovo mexido, torrada integral e café pura", calories: 340 },
+    { id: "1", time: "08:15", mealType: "Café", description: "Ovo mexido, torrada integral e café puro", calories: 340 },
     { id: "2", time: "12:30", mealType: "Almoço", description: "Grelhado com arroz integral e salada verde", calories: 580 },
   ]);
   const [foodDesc, setFoodDesc] = useState("");
@@ -66,11 +79,134 @@ export default function PhoneSimulator({
   const [newMedTime, setNewMedTime] = useState("08:00");
   const [newMedFreq, setNewMedFreq] = useState("1x ao dia");
 
-  // Heartbeat chart simulation (scrolling buffer)
-  const [chartData, setChartData] = useState<number[]>(Array(24).fill(72));
+  // Heartbeat chart simulation (scrolling buffer for ECG visualization)
+  const [chartData, setChartData] = useState<number[]>(Array(30).fill(72));
 
   // Time String clock
   const [currentTime, setCurrentTime] = useState("");
+
+  // Copy SQL script tool helper
+  const sqlSchemaText = `-- CADASTRO DE TABELAS NO SUPABASE (SQL EDITOR)
+-- Copie e cole este script no painel "SQL Editor" do seu Supabase para testar a persistência cloud:
+
+CREATE TABLE IF NOT EXISTS public.medications (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  dosage TEXT,
+  frequency TEXT,
+  time TEXT,
+  taken BOOLEAN DEFAULT false,
+  taken_at TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.food_logs (
+  id TEXT PRIMARY KEY,
+  time TEXT NOT NULL,
+  meal_type TEXT NOT NULL,
+  description TEXT,
+  calories INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.water_logs (
+  id TEXT PRIMARY KEY,
+  amount INTEGER DEFAULT 0,
+  log_date TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Configurações rápidas de RLS público (leitura e escrita irrestritas para simulação):
+ALTER TABLE public.medications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.food_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.water_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir leitura anon" ON public.medications FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao anon" ON public.medications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir atualizacao anon" ON public.medications FOR UPDATE USING (true);
+CREATE POLICY "Permitir remocoes anon" ON public.medications FOR DELETE USING (true);
+
+CREATE POLICY "Permitir leitura anon_food" ON public.food_logs FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao anon_food" ON public.food_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir remocoes anon_food" ON public.food_logs FOR DELETE USING (true);
+
+CREATE POLICY "Permitir leitura anon_water" ON public.water_logs FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao anon_water" ON public.water_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir remocoes anon_water" ON public.water_logs FOR DELETE USING (true);
+`;
+
+  // Fetch initial data from Supabase if online and tables exist
+  const fetchSupabaseData = async () => {
+    setSyncStatus("syncing");
+    setSyncMessage("Buscando informações do Supabase...");
+    try {
+      // 1. Fetch medications
+      const { data: dbMeds, error: medsError } = await supabase
+        .from("medications")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (medsError) throw medsError;
+
+      // 2. Fetch food logs
+      const { data: dbFood, error: foodError } = await supabase
+        .from("food_logs")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (foodError) throw foodError;
+
+      // 3. Fetch water logs for today
+      const todayStr = new Date().toISOString().split("T")[0];
+      const { data: dbWater, error: waterError } = await supabase
+        .from("water_logs")
+        .select("*")
+        .eq("log_date", todayStr);
+
+      if (waterError) throw waterError;
+
+      // Synchronize back to local states
+      if (dbMeds && dbMeds.length > 0) {
+        setMeds(dbMeds.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          dosage: m.dosage || "",
+          frequency: m.frequency || "",
+          time: m.time || "08:00",
+          taken: !!m.taken,
+          takenAt: m.taken_at || undefined,
+        })));
+      }
+
+      if (dbFood && dbFood.length > 0) {
+        setFoodLogs(dbFood.map((f: any) => ({
+          id: f.id,
+          time: f.time,
+          mealType: f.meal_type as any,
+          description: f.description || "",
+          calories: f.calories || 0,
+        })));
+      }
+
+      if (dbWater && dbWater.length > 0) {
+        const totalWater = dbWater.reduce((sum, w) => sum + (w.amount || 0), 0);
+        setWaterIntake(totalWater);
+      } else {
+        setWaterIntake(0);
+      }
+
+      setSyncStatus("success");
+      setSyncMessage("Dados sincronizados com o Supabase!");
+    } catch (err: any) {
+      console.warn("Could not load from Supabase - sandbox local mode remains active. Error:", err);
+      setSyncStatus("error");
+      setSyncMessage(err.message || "Tabelas não criadas ou erro de conexão.");
+    }
+  };
+
+  useEffect(() => {
+    fetchSupabaseData();
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -139,27 +275,51 @@ export default function PhoneSimulator({
   };
 
   // Simulates taking water right after notification action click
-  const handleAutoDrink = (amount: number) => {
+  const handleAutoDrink = async (amount: number) => {
     setWaterIntake((prev) => Math.min(prev + amount, 4000));
+    
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const newWaterLogId = String(Date.now());
+      const { error } = await supabase.from("water_logs").insert([
+        { id: newWaterLogId, amount, log_date: todayStr }
+      ]);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase water registration skipped or failed:", err);
+    }
   };
 
   // Water increment log
-  const handleAddWater = (amount: number) => {
+  const handleAddWater = async (amount: number) => {
     setWaterIntake((current) => Math.min(current + amount, 4000));
     // Dynamic micro popup notification feedback helper
     if (Math.random() > 0.4) {
       onTriggerNotification({
         id: String(Date.now()),
         title: "💧 Hidratado!",
-        body: `Você registrou +${amount}ml de água com sucesso.`,
+        body: `Você registrou +${amount}ml de água com sucesso no app.`,
         time: "Agora",
         type: "water",
       });
     }
+
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const newWaterLogId = String(Date.now());
+      const { error } = await supabase.from("water_logs").insert([
+        { id: newWaterLogId, amount, log_date: todayStr }
+      ]);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase water logging failed:", err);
+    }
   };
 
   // Add custom food
-  const handleAddFood = (e: React.FormEvent) => {
+  const handleAddFood = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!foodDesc.trim()) return;
 
@@ -181,20 +341,52 @@ export default function PhoneSimulator({
       time: "Agora",
       type: "food",
     });
+
+    try {
+      const { error } = await supabase.from("food_logs").insert([
+        {
+          id: newLog.id,
+          time: newLog.time,
+          meal_type: newLog.mealType,
+          description: newLog.description,
+          calories: newLog.calories,
+        }
+      ]);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase food log registration failed:", err);
+    }
   };
 
-  const handleDeleteFood = (id: string, calories: number, type: string) => {
+  const handleDeleteFood = async (id: string, calories: number, type: string) => {
     setFoodLogs(foodLogs.filter((log) => log.id !== id));
+
+    try {
+      const { error } = await supabase.from("food_logs").delete().eq("id", id);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase food log deletion skipped:", err);
+    }
   };
 
   // Medication actions
-  const toggleMed = (id: string) => {
+  const toggleMed = async (id: string) => {
+    let updatedMed: Medication | null = null;
     setMeds(
       meds.map((med) => {
         if (med.id === id) {
           const nextState = !med.taken;
+          const takenAtStr = nextState ? new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : undefined;
+          
+          updatedMed = {
+            ...med,
+            taken: nextState,
+            takenAt: takenAtStr,
+          };
+
           if (nextState) {
-            // Toast notify
             onTriggerNotification({
               id: String(Date.now()),
               title: "✅ Remédio Tomado",
@@ -202,20 +394,31 @@ export default function PhoneSimulator({
               time: "Agora",
               type: "medication",
             });
-            return {
-              ...med,
-              taken: true,
-              takenAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-            };
           }
-          return { ...med, taken: false, takenAt: undefined };
+          return updatedMed;
         }
         return med;
       })
     );
+
+    if (updatedMed) {
+      try {
+        const { error } = await supabase
+          .from("medications")
+          .update({
+            taken: (updatedMed as Medication).taken,
+            taken_at: (updatedMed as Medication).takenAt || null,
+          })
+          .eq("id", id);
+        if (error) throw error;
+        setSyncStatus("success");
+      } catch (err) {
+        console.warn("Supabase medication status update skipped:", err);
+      }
+    }
   };
 
-  const handleAddMed = (e: React.FormEvent) => {
+  const handleAddMed = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMedName.trim() || !newMedDosage.trim()) return;
 
@@ -239,10 +442,36 @@ export default function PhoneSimulator({
       time: "Agora",
       type: "medication",
     });
+
+    try {
+      const { error } = await supabase.from("medications").insert([
+        {
+          id: newMed.id,
+          name: newMed.name,
+          dosage: newMed.dosage,
+          frequency: newMed.frequency,
+          time: newMed.time,
+          taken: false,
+          taken_at: null,
+        }
+      ]);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase medication insertion failed:", err);
+    }
   };
 
-  const deleteMed = (id: string) => {
+  const deleteMed = async (id: string) => {
     setMeds(meds.filter((m) => m.id !== id));
+
+    try {
+      const { error } = await supabase.from("medications").delete().eq("id", id);
+      if (error) throw error;
+      setSyncStatus("success");
+    } catch (err) {
+      console.warn("Supabase medication deletion failed:", err);
+    }
   };
 
   // Simulates medication alert rings!
@@ -261,483 +490,534 @@ export default function PhoneSimulator({
   const totalCalories = foodLogs.reduce((acc, curr) => acc + curr.calories, 0);
   const dailyCalorieGoal = 2000;
 
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(sqlSchemaText);
+    setSqlCopied(true);
+    setTimeout(() => setSqlCopied(false), 2000);
+  };
+
   return (
-    <div id="phone-container" className="flex flex-col items-center">
+    <div className="w-full flex flex-col gap-6 text-slate-350">
       
-      {/* Simulation Devices Status bar / Controller */}
-      <div className="w-full max-w-sm mb-4 px-4 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400 shadow-sm transition-all">
-        <div className="flex items-center gap-1.5 font-medium">
-          <Watch className="w-4 h-4 text-rose-500 animate-pulse" />
-          <span>Status do Relógio:</span>
-          <select
-            value={wearableState}
-            onChange={(e) => setWearableState(e.target.value as WearableStatus)}
-            className="font-semibold bg-transparent border-none text-rose-400 focus:outline-none cursor-pointer"
-          >
-            <option value="Aparelho Conectado" className="bg-slate-950 text-slate-300">Conectado (Smartwatch)</option>
-            <option value="Conectando..." className="bg-slate-950 text-slate-300">Buscando pareamento...</option>
-            <option value="Desconectado" className="bg-slate-950 text-slate-300">Despareado</option>
-          </select>
+      {/* Top Banner Control Center */}
+      <div className="w-full p-5 bg-[#0e0e12]/90 border border-slate-800/80 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl backdrop-blur relative">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+            <Watch className="w-5 h-5 text-indigo-400 animate-pulse" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-1.5 leading-none mb-1">
+              Painel de Integração de Wearables
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">Smartwatch Status:</span>
+              <select
+                value={wearableState}
+                onChange={(e) => setWearableState(e.target.value as WearableStatus)}
+                className="text-xs font-bold text-rose-400 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 outline-none cursor-pointer focus:border-rose-500"
+              >
+                <option value="Aparelho Conectado" className="bg-slate-950 text-slate-300">🟢 Conectado (BLE Active)</option>
+                <option value="Conectando..." className="bg-slate-950 text-slate-300">🟡 Pareando...</option>
+                <option value="Desconectado" className="bg-slate-950 text-slate-300">🔴 Desconectado</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="bg-slate-800 border border-slate-700/50 px-2 py-0.5 rounded-full font-mono text-[10px] items-center flex gap-1 text-slate-300">
-            🔋 {battery}%
-          </span>
-          <button
-            onClick={() => setBattery(100)}
-            title="Recarregar"
-            className="p-1 hover:bg-slate-800 rounded-full transition-colors text-slate-450 hover:text-white"
-          >
-            <RefreshCw className="w-3 h-3" />
-          </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Smartwatch Battery Indicator */}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-400 font-mono">
+              🔋 Smartwatch: {battery}%
+            </span>
+            <button
+              onClick={() => setBattery(100)}
+              title="Recarregar Bateria"
+              className="p-1 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Supabase Status Button */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSyncPanel(!showSyncPanel)}
+              className="text-xs font-bold text-indigo-300 bg-indigo-505/10 hover:bg-indigo-505/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Database className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Conector Cloud SQL</span>
+              {syncStatus === "success" && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
+              {syncStatus === "error" && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>}
+              {syncStatus === "syncing" && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-spin"></span>}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Interactive Mobile Device Simulator Frame */}
-      <div className="w-full max-w-sm bg-slate-950 p-3.5 rounded-[44px] shadow-2xl border-4 border-slate-800/80 relative overflow-hidden ring-4 ring-slate-900/10">
-        
-        {/* Device Ear Speaker Notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-40 flex items-center justify-center">
-          <div className="w-12 h-1 bg-slate-800 rounded-full mb-1"></div>
-        </div>
+      {/* Supabase details expanded panel */}
+      {showSyncPanel && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="w-full bg-[#0a0a0f] border border-indigo-500/25 p-5 rounded-2xl flex flex-col gap-4 text-left shadow-lg overflow-hidden"
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-xs font-bold font-mono text-indigo-300 uppercase tracking-widest">Configuração do Banco Secundário cloud</h3>
+            </div>
+            <button
+              onClick={fetchSupabaseData}
+              disabled={syncStatus === "syncing"}
+              className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-505/20 text-emerald-400 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3 h-3 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
+              <span>Sincronizar Cloud SQL</span>
+            </button>
+          </div>
 
-        {/* Live Device Top Notification banner overlay */}
-        <div className="absolute top-8 left-3 right-3 z-50 pointer-events-none">
-          <AnimatePresence>
-            {notifications.slice(0, 1).map((not) => (
-              <motion.div
-                key={not.id}
-                initial={{ opacity: 0, y: -50, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className="w-full bg-white/95 dark:bg-slate-900/95 shadow-xl rounded-2xl p-3.5 border border-slate-200/80 pointer-events-auto dark:border-slate-800 flex flex-col gap-2 cursor-pointer"
-                onClick={() => {
-                  // If it has action, simulate immediate fulfillment
-                  if (not.actionText) {
-                    if (not.type === "water") {
-                      handleAutoDrink(250);
-                    } else if (not.type === "medication") {
-                      // Find first untaken medication of the name and mark it as checked
-                      const activeMed = meds.find((m) => not.body.includes(m.name) && !m.taken);
-                      if (activeMed) toggleMed(activeMed.id);
-                    }
-                  }
-                  // Remove from banner
-                  setNotifications((prev) => prev.filter((item) => item.id !== not.id));
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">🔔</span>
-                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                      {not.title}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-mono font-medium">{not.time}</span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 antialiased leading-relaxed">
-                  {not.body}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            O portal está programado com um fallback sandbox local para que você teste à vontade. Para habilitar a escrita na nuvem do Supabase, copie o script abaixo e rode-o no seu terminal SQL.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs font-mono space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">DATABASE URL:</span>
+                <span className="text-slate-300 break-all select-all">https://vsggnechqtuyknekebmf.supabase.co</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">ANON KEY:</span>
+                <span className="text-slate-300 truncate max-w-[150px] select-all">sb_publishable_HsOeEfZkGh2elTo2ZWYGZw_trhuU9A3</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-900 pt-2 mt-2">
+                <span className="text-slate-500">STATUS:</span>
+                <span className={`font-bold uppercase ${syncStatus === "success" ? "text-emerald-400" : "text-amber-400 animate-pulse"}`}>
+                  {syncStatus === "success" ? "Sincronizado na Nuvem" : "Modo Sandbox (Tabelas pendentes)"}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-xl flex flex-col justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] text-indigo-400 font-bold uppercase font-mono">Criação das Tabelas no Database Cloud</span>
+                <p className="text-[11px] text-slate-400">
+                  Execute o script SQL para as tabelas `medications`, `food_logs` e `water_logs` estarem integradas ao seu back-end.
                 </p>
-                {not.actionText && (
-                  <button className="w-full text-center py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-semibold transition-colors mt-1">
-                    {not.actionText} (Toque para Agir)
-                  </button>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopySql}
+                  className="flex-1 py-2 px-3 text-xs bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>{sqlCopied ? "Copiado!" : "Copiar Script SQL"}</span>
+                </button>
+                <a
+                  href="https://supabase.com/dashboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2 px-3 text-xs border border-slate-800 hover:border-slate-700 hover:bg-slate-900 text-slate-300 font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Supabase Dashboard</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
-        {/* Screen Content Wrapper */}
-        <div className="w-full bg-[#0d0d0f] rounded-[32px] overflow-hidden min-h-[640px] flex flex-col relative text-slate-300">
+      {/* Responsive Bento Grid Dashboard UI */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {/* Heartbeat sensor widget - Bento Card 5 cols */}
+        <div className="lg:col-span-5 bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-rose-500/[0.015] rounded-full blur-3xl pointer-events-none"></div>
           
-          {/* Internal Mobile Status Bar */}
-          <div className="px-5 pt-3 pb-2.5 flex items-center justify-between text-[11px] font-semibold text-slate-500 tracking-tight bg-[#0d0d0f]/90 border-b border-slate-900/60 backdrop-blur z-20">
-            <span>{currentTime || "12:00"}</span>
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
-              <span>LTE</span>
-              <span className="text-emerald-500">⬤</span>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-rose-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Heart className={`w-4 h-4 text-rose-500 ${bpm > 0 ? "animate-pulse" : ""} fill-rose-500`} />
+                <span>Sensor de Batimentos (Frequência)</span>
+              </span>
+              <span className="text-xs text-slate-500 font-mono font-bold uppercase">{currentTime || "-:-"}</span>
+            </div>
+
+            <div className="flex items-baseline gap-1.5 mt-2">
+              <span className="text-6xl font-light text-white tracking-tighter">
+                {bpm > 0 ? bpm : "---"}
+              </span>
+              <span className="text-sm font-bold text-rose-500">BPM</span>
+            </div>
+
+            <div className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-rose-500" />
+              <span>Sinal: {wearableState === "Aparelho Conectado" ? "Excelente (Leitura Real-Time)" : "Pausado (Smartwatch despareado)"}</span>
+            </div>
+
+            {/* Sparkline live chart display of heartbeat ECG stream */}
+            <div className="h-16 w-full mt-6 bg-slate-950/40 border border-slate-900 rounded-xl p-2 flex items-end gap-[2px]">
+              {chartData.map((val, i) => {
+                const percent = Math.min(Math.max(((val - 45) / 120) * 100, 10), 95);
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-rose-600/20 to-rose-500/80 hover:to-rose-450 rounded-t transition-all duration-300"
+                    style={{ height: `${percent}%` }}
+                    title={`BPM: ${val}`}
+                  />
+                );
+              })}
             </div>
           </div>
 
-          {/* Core App View (Scrollable layout) */}
-          <div className="flex-1 overflow-y-auto no-scrollbar pb-10 px-4 pt-1 flex flex-col gap-4">
-            
-            {/* Health Hub Title */}
-            <div className="flex items-center justify-between mt-3 px-1">
-              <div>
-                <span className="text-[10px] text-slate-500 tracking-wider font-mono font-bold uppercase">Vitalis App</span>
-                <h1 className="text-xl font-semibold tracking-tight text-white italic">VITALISYNC</h1>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
-                <span className="text-[10px] text-slate-400 font-medium font-mono uppercase">Smartwatch</span>
-              </div>
-            </div>
-
-            {/* Smartwatch Real-time Heart Rate Card */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden group">
-              
-              {/* Pulse animation bg */}
-              <div className="absolute top-4 right-4 flex items-center justify-center">
-                <span className="absolute w-7 h-7 bg-red-500/10 rounded-full animate-ping"></span>
-                <Heart className={`w-5 h-5 text-rose-500 ${bpm > 0 ? "animate-pulse" : ""} fill-rose-500`} />
-              </div>
-
-              <div className="flex flex-col">
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-2">
-                  Frequência Cardíaca
-                </span>
-                
-                <div className="flex items-baseline">
-                  <span className="text-5xl font-light text-white transition-all duration-300">
-                    {bpm > 0 ? bpm : "---"}
+          {/* Activity preset select toggles */}
+          <div className="mt-6 pt-5 border-t border-slate-900/80">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono block mb-2">
+              Mudar Atividade Relacionada (Simulador):
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {HEART_PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => setActivePreset(p.name)}
+                  className={`text-xs font-bold px-3 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
+                    activePreset === p.name
+                      ? "bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-sm"
+                      : "bg-slate-900/30 border-slate-800/40 text-slate-400 hover:bg-slate-900 hover:text-white"
+                  }`}
+                >
+                  <span>{p.name}</span>
+                  <span className="text-[10px] text-slate-500 font-mono font-semibold">
+                    {p.range[0]}-{p.range[1]}
                   </span>
-                  <span className="text-sm font-medium text-rose-500 ml-1.5">BPM</span>
-                </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
-                <div className="text-[10px] text-slate-500 font-medium mt-1.5 select-none flex items-center gap-1">
-                  <Activity className="w-3.5 h-3.5 text-rose-450" />
-                  <span>Sinal do Sensor: {wearableState === "Aparelho Conectado" ? "Excelente" : "Ausente"}</span>
-                </div>
-              </div>
+        {/* Hydration tracking cyclical management - Bento Card 7 cols */}
+        <div className="lg:col-span-7 bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/[0.015] rounded-full blur-3xl pointer-events-none"></div>
 
-              {/* Real-time Scrolling ECG Wave graphic simulation */}
-              <div className="h-12 w-full mt-3 overflow-hidden flex items-end gap-[2px]">
-                {chartData.map((val, i) => {
-                  const percent = Math.min(Math.max(((val - 45) / 120) * 100, 10), 95);
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 bg-rose-500/20 hover:bg-rose-500/60 rounded-t transition-all duration-200"
-                      style={{ height: `${percent}%` }}
-                      title={`BPM: ${val}`}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Heart Preset State Switcher right inside the simulator */}
-              <div className="mt-3.5 pt-3 border-t border-slate-800">
-                <span className="text-[9px] text-slate-500 font-bold tracking-wider uppercase block mb-1.5 font-mono">
-                  Atividade do Monitor:
-                </span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {HEART_PRESETS.map((p) => (
-                    <button
-                      key={p.name}
-                      onClick={() => setActivePreset(p.name)}
-                      className={`text-[10px] font-semibold px-2 py-1 rounded-lg border text-left transition-all flex items-center justify-between ${
-                        activePreset === p.name
-                          ? "bg-rose-500 border-rose-600 text-white"
-                          : "bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-800 hover:text-white"
-                      }`}
-                    >
-                      <span>{p.name}</span>
-                      <span className="text-[8px] opacity-75 font-mono">
-                        {p.range[0]}-{p.range[1]}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Droplet className="w-4 h-4 text-indigo-400 animate-bounce" />
+                <span>Registro de Hidratação Diária</span>
+              </span>
+              <span className="text-xs text-slate-500 font-mono font-bold uppercase">Consumo Ideal</span>
             </div>
 
-            {/* Cyclical Hydration Hydrated Alarm Wave */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col">
-              
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-2 block">Hidratação</span>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-3xl font-light text-white">
-                      {waterIntake >= 1000 ? `${(waterIntake / 1000).toFixed(1)}L` : `${waterIntake}ml`}
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">/ 2.5L</span>
-                  </div>
-                </div>
-                <Droplet className="w-5 h-5 text-indigo-500 animate-bounce" />
-              </div>
+            <div className="flex items-baseline gap-1.5 mt-2">
+              <span className="text-6xl font-light text-white tracking-tighter">
+                {waterIntake >= 1000 ? `${(waterIntake / 1000).toFixed(2)}` : `${waterIntake}`}
+                {waterIntake >= 1000 ? <span className="text-xl font-bold ml-1 text-indigo-400">Litros</span> : <span className="text-xl font-bold ml-1 text-indigo-400">ml</span>}
+              </span>
+              <span className="text-xs text-slate-400 font-medium">/ 2.50L Meta Mínima</span>
+            </div>
 
-              {/* Progress liquid wave bar */}
-              <div className="w-full bg-slate-950 h-5 rounded-full overflow-hidden relative border border-slate-850 flex items-center justify-center my-1.5">
-                <div
-                  className="bg-indigo-600 h-full absolute left-0 bottom-0 top-0 transition-all duration-300 rounded-full"
-                  style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%` }}
-                />
-                
-                {/* Micro waveform overlay glassmorphism */}
-                <div className="w-full h-full absolute inset-0 bg-gradient-to-t from-indigo-600/20 to-transparent animate-wave"></div>
-                
-                <span className="z-10 text-[9px] font-bold text-slate-200">
-                  {Math.round((waterIntake / waterGoal) * 100)}% Consumido
-                </span>
-              </div>
+            {/* Custom high-end interactive progress bar waves */}
+            <div className="w-full bg-slate-950 h-6 rounded-2xl overflow-hidden relative border border-slate-900 flex items-center justify-center my-6 shadow-inner">
+              <div
+                className="bg-gradient-to-r from-indigo-650 to-indigo-500 h-full absolute left-0 bottom-0 top-0 transition-all duration-300 rounded-2xl"
+                style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%` }}
+              />
+              <span className="z-10 text-xs font-extrabold text-blue-100 uppercase tracking-wider font-mono">
+                {Math.round((waterIntake / waterGoal) * 100)}% Consumidos
+              </span>
+            </div>
 
-              {/* Logging and reminder buttons */}
-              <div className="flex gap-1.5 mt-2">
-                <button
-                  onClick={() => handleAddWater(150)}
-                  className="flex-1 py-1.5 bg-slate-800/40 hover:bg-slate-850 text-indigo-400 border border-slate-755 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center"
-                >
-                  +150ml
-                </button>
-                <button
-                  onClick={() => handleAddWater(250)}
-                  className="flex-1 py-1.5 bg-indigo-500/10 hover:bg-indigo-550/20 text-indigo-300 border border-indigo-500/20 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center"
-                >
-                  +250ml
-                </button>
-                <button
-                  onClick={() => handleAddWater(500)}
-                  className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center shadow-sm"
-                >
-                  +500ml
-                </button>
-              </div>
-
-              {/* Hydration alert sim trigger */}
+            {/* Hydration quick presets log triggers */}
+            <div className="grid grid-cols-3 gap-3">
               <button
-                type="button"
-                onClick={triggerWaterReminderSim}
-                className="mt-3 py-1.5 w-full border border-indigo-500/20 border-dashed text-indigo-400 hover:bg-indigo-950/20 rounded-lg text-[10px] font-semibold transition-all flex items-center justify-center gap-1.5"
+                onClick={() => handleAddWater(150)}
+                className="py-3 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-indigo-300 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 focus:border-indigo-500"
               >
-                <Bell className="w-3.5 h-3.5" />
-                <span>Simular Lembrete de Água Push</span>
+                <span className="text-xs">💧</span>
+                <span>+150 ml</span>
+              </button>
+              <button
+                onClick={() => handleAddWater(250)}
+                className="py-3 bg-indigo-550/10 hover:bg-slate-900 border border-indigo-500/20 text-indigo-200 text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 focus:border-indigo-500"
+              >
+                <span className="text-xs">🥤</span>
+                <span>+250 ml</span>
+              </button>
+              <button
+                onClick={() => handleAddWater(500)}
+                className="py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-1 shadow"
+              >
+                <span className="text-xs text-blue-200">🌊</span>
+                <span>+500 ml</span>
               </button>
             </div>
+          </div>
 
-            {/* Medication Reminders Card */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Remédios do Dia</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/15 rounded-md">
-                  {meds.filter(m => !m.taken).length} Pendentes
-                </span>
-              </div>
+          {/* Test reminder triggers */}
+          <div className="mt-5 pt-4 border-t border-slate-900/80 flex flex-col sm:flex-row items-center gap-3">
+            <p className="text-[11px] text-slate-500 font-medium text-left">
+              Quer testar como o aplicativo móvel reage a alertas em background?
+            </p>
+            <button
+              onClick={triggerWaterReminderSim}
+              className="w-full sm:w-auto px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 hover:text-indigo-300 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Disparar Lembrete Push</span>
+            </button>
+          </div>
+        </div>
 
-              {/* Med alarm list */}
-              <div className="flex flex-col gap-2">
-                {meds.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-4">Nenhum remédio cadastrado no momento.</p>
-                ) : (
-                  meds.map((med) => (
-                    <div
-                      key={med.id}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                        med.taken
-                          ? "bg-slate-950/40 border-slate-900 opacity-60"
-                          : "bg-amber-500/5 border-amber-500/10"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleMed(med.id)}
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                            med.taken
-                              ? "bg-emerald-500 border-emerald-600 text-white"
-                              : "border-slate-700 bg-slate-950 text-slate-300"
-                          }`}
-                        >
-                          {med.taken && <Check className="w-3 h-3 text-emerald-500" />}
-                        </button>
-                        <div className="text-left">
-                          <p className={`text-xs font-bold leading-tight ${med.taken ? "line-through text-slate-500" : "text-slate-200"}`}>
-                            {med.name}
-                          </p>
-                          <p className="text-[10px] text-slate-500">
-                            {med.dosage} · <span className="font-semibold text-amber-500 tracking-wide font-mono">{med.time}</span>
-                          </p>
-                        </div>
-                      </div>
+      </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => triggerMedAlarmSim(med)}
-                          title="Simular Alarme de Remédio"
-                          className="p-1 text-amber-500 hover:bg-slate-800 rounded transition-colors"
-                        >
-                          <Bell className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => deleteMed(med.id)}
-                          title="Remover"
-                          className="p-1 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add Med Inline Form */}
-              <form onSubmit={handleAddMed} className="p-2 border border-dashed border-slate-800 rounded-xl bg-slate-950/40 flex flex-col gap-2">
-                <span className="text-[9px] font-bold text-slate-550 tracking-wide uppercase font-mono">Cadastrar Novo Remédio:</span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Vitamina D"
-                    value={newMedName}
-                    onChange={(e) => setNewMedName(e.target.value)}
-                    className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-[10px] text-white outline-none font-medium focus:border-amber-500"
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Dosagem (ex: 1 cápsula)"
-                    value={newMedDosage}
-                    onChange={(e) => setNewMedDosage(e.target.value)}
-                    className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-[10px] text-white outline-none font-medium focus:border-amber-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <input
-                    type="time"
-                    required
-                    value={newMedTime}
-                    onChange={(e) => setNewMedTime(e.target.value)}
-                    className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-[10px] text-white outline-none font-mono font-semibold focus:border-amber-500"
-                  />
-                  <button
-                    type="submit"
-                    className="py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Adicionar Alarme</span>
-                  </button>
-                </div>
-              </form>
+      {/* Bottom widgets section - meds, calorie counters */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        
+        {/* Prescription medication scheduling ledger */}
+        <div className="bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-900/80">
+              <span className="text-xs font-semibold text-amber-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <span>💊</span>
+                <span>Agenda de Medicamentos do Dia</span>
+              </span>
+              <span className="text-[11px] font-extrabold px-2.5 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-lg uppercase tracking-wide">
+                {meds.filter(m => !m.taken).length} Pendentes hoje
+              </span>
             </div>
 
-            {/* Food logs & Nutritional targets */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-              <div className="flex justify-between items-center pb-1 border-b border-slate-800">
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Registro de Alimentação</span>
-                <div className="text-[10px] font-mono font-bold text-slate-300">
-                  {totalCalories} / {dailyCalorieGoal} kcal
-                </div>
-              </div>
+            {/* List and toggle checks */}
+            <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto no-scrollbar pr-1">
+              {meds.length === 0 ? (
+                <p className="text-xs text-slate-500 py-6 text-center">Nenhum medicamento agendado.</p>
+              ) : (
+                meds.map((med) => (
+                  <div
+                    key={med.id}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                      med.taken
+                        ? "bg-slate-950/30 border-slate-900 opacity-55"
+                        : "bg-amber-500/[0.03] border-amber-500/15"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleMed(med.id)}
+                        className={`w-6 h-6 rounded-xl border flex items-center justify-center transition-all ${
+                          med.taken
+                            ? "bg-emerald-500 border-emerald-600 text-white"
+                            : "border-slate-700 bg-slate-950 text-slate-350 hover:border-amber-500"
+                        }`}
+                      >
+                        {med.taken && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                      <div className="text-left">
+                        <p className={`text-xs font-bold leading-none mb-1 ${med.taken ? "line-through text-slate-500" : "text-slate-200"}`}>
+                          {med.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Dosagem: <span className="text-slate-350 font-semibold">{med.dosage}</span> · Horário: <span className="font-semibold text-amber-400 tracking-wide font-mono">{med.time}</span>
+                        </p>
+                      </div>
+                    </div>
 
-              {/* Progress gauge */}
-              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => triggerMedAlarmSim(med)}
+                        title="Simular Notificação do Medicamento"
+                        className="p-1 px-2 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/10 hover:border-amber-500/30 hover:bg-amber-500/15 rounded-lg transition-all flex items-center gap-1.5"
+                      >
+                        <Bell className="w-3 h-3" />
+                        <span>Notificar</span>
+                      </button>
+                      <button
+                        onClick={() => deleteMed(med.id)}
+                        title="Remover Registro"
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-900 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* New medication alarm forms */}
+          <form onSubmit={handleAddMed} className="p-3 border border-dashed border-slate-800 rounded-2xl bg-slate-950/20 flex flex-col gap-3 mt-4 text-left">
+            <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase font-mono block">Cadastrar Novo Medicamento Clínico:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400">Nome do Remédio</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Ácido Fólico"
+                  value={newMedName}
+                  onChange={(e) => setNewMedName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-amber-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400">Fórmula / Dosagem</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: 50mg - 1 comprimido"
+                  value={newMedDosage}
+                  onChange={(e) => setNewMedDosage(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400">Horário Agendado</label>
+                <input
+                  type="time"
+                  required
+                  value={newMedTime}
+                  onChange={(e) => setNewMedTime(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none font-mono font-semibold focus:border-amber-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Salvar Nova Agenda</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Nutritional meal logging widget */}
+        <div className="bg-[#0e0e12]/50 border border-slate-800/80 rounded-3xl p-6 shadow-sm hover:border-slate-800 flex flex-col justify-between transition-all">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-900/80">
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Coffee className="w-4 h-4 text-emerald-400" />
+                <span>Registro Alimentar & Dieta</span>
+              </span>
+              <div className="text-right">
+                <span className="text-xs text-slate-400">Meta Calórica: </span>
+                <span className="text-xs font-bold font-mono text-emerald-400">{totalCalories} / {dailyCalorieGoal} kcal</span>
+              </div>
+            </div>
+
+            {/* Calories visual progress gauge ring */}
+            <div className="space-y-1 text-left">
+              <div className="flex justify-between text-[11px] font-mono text-slate-500 font-bold">
+                <span>PROGRESSO DIÁRIO</span>
+                <span>{Math.round((totalCalories / dailyCalorieGoal) * 100)}%</span>
+              </div>
+              <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-900 shadow-inner">
                 <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-full transition-all duration-300"
                   style={{ width: `${Math.min((totalCalories / dailyCalorieGoal) * 100, 100)}%` }}
                 />
               </div>
+            </div>
 
-              {/* List added logs */}
-              <div className="flex flex-col gap-1.5">
-                {foodLogs.map((log) => (
-                  <div key={log.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-950/30 border border-slate-850">
+            {/* List meal records */}
+            <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto no-scrollbar pr-1">
+              {foodLogs.length === 0 ? (
+                <p className="text-xs text-slate-555 py-4 text-center">Nenhum log inserido hoje.</p>
+              ) : (
+                foodLogs.map((log) => (
+                  <div key={log.id} className="flex justify-between items-center p-3 rounded-2xl bg-slate-950/40 border border-slate-900 hover:border-slate-850 transition-all duration-150">
                     <div className="text-left">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold px-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded font-sans uppercase tracking-wide">
                           {log.mealType}
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono">{log.time}</span>
                       </div>
-                      <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
+                      <p className="text-xs font-medium text-slate-200 line-clamp-1">
                         {log.description}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold font-mono text-slate-300">
+                    
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs font-black font-mono text-slate-300 whitespace-nowrap">
                         {log.calories} kcal
                       </span>
                       <button
                         onClick={() => handleDeleteFood(log.id, log.calories, log.mealType)}
-                        className="text-slate-555 hover:text-rose-450 transition-colors cursor-pointer"
-                        title="Remover"
+                        className="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                        title="Deletar refeição"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Food adding form */}
+          <form onSubmit={handleAddFood} className="p-3 border border-dashed border-slate-800 rounded-2xl bg-slate-950/20 flex flex-col gap-3 mt-4 text-left">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase font-mono block">Logar Nova Refeição Ativa:</span>
+              
+              <div className="flex gap-1 font-sans">
+                {(["Café", "Almoço", "Jantar", "Lanche"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setFoodType(type)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                      foodType === type
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800"
+                    }`}
+                  >
+                    {type}
+                  </button>
                 ))}
               </div>
-
-              {/* Add form */}
-              <form onSubmit={handleAddFood} className="p-2 border border-dashed border-slate-800 rounded-xl bg-slate-950/40 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wide font-mono">
-                  <span>Adicionar Comida:</span>
-                  <div className="flex gap-1.5 font-sans">
-                    {(["Café", "Almoço", "Jantar", "Lanche"] as const).map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setFoodType(type)}
-                        className={`px-1.5 py-0.5 rounded text-[8px] transition-all cursor-pointer ${
-                          foodType === type
-                            ? "bg-emerald-500 text-white"
-                            : "bg-slate-800 text-slate-400 hover:bg-slate-705"
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Maçã ou salada"
-                    value={foodDesc}
-                    onChange={(e) => setFoodDesc(e.target.value)}
-                    className="flex-1 px-2 py-1 bg-slate-950 border border-slate-805 rounded text-[10px] text-white outline-none font-medium focus:border-emerald-500"
-                  />
-                  <input
-                    type="number"
-                    max="1505"
-                    placeholder="Kcal"
-                    value={foodCalories}
-                    onChange={(e) => setFoodCalories(Number(e.target.value))}
-                    className="w-16 px-2 py-1 bg-slate-950 border border-slate-805 rounded text-[10px] text-white outline-none font-mono font-semibold focus:border-emerald-500"
-                  />
-                  <button
-                    type="submit"
-                    className="px-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded transition-all cursor-pointer"
-                  >
-                    Log
-                  </button>
-                </div>
-              </form>
             </div>
 
-          </div>
-
-          {/* Simulated App Navigation bar at the bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-11 bg-[#0d0d0f]/95 backdrop-blur border-t border-slate-900/80 flex items-center justify-around text-slate-500 z-10 px-6">
-            <button className="text-rose-500 flex flex-col items-center cursor-pointer">
-              <Activity className="w-4 h-4" />
-              <span className="text-[7.5px] font-bold mt-0.5">Métricas</span>
-            </button>
-            <button className="hover:text-indigo-400 transition-colors flex flex-col items-center cursor-pointer" onClick={() => handleAddWater(250)}>
-              <Droplet className="w-4 h-4" />
-              <span className="text-[7.5px] font-medium mt-0.5">Beber Água</span>
-            </button>
-            <div className="w-7 h-7 bg-rose-500 rounded-full flex items-center justify-center -translate-y-2 border-2 border-[#0d0d0f] shadow-md cursor-pointer">
-              <Plus className="w-4 h-4 text-white" />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                required
+                placeholder="Ex: Omelete de clara e ricota"
+                value={foodDesc}
+                onChange={(e) => setFoodDesc(e.target.value)}
+                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none focus:border-emerald-500"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  max="1500"
+                  placeholder="Kcal"
+                  value={foodCalories}
+                  onChange={(e) => setFoodCalories(Number(e.target.value))}
+                  className="w-20 px-3 py-2 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white outline-none font-mono font-semibold focus:border-emerald-500"
+                />
+                <button
+                  type="submit"
+                  className="px-5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all font-mono uppercase tracking-wider cursor-pointer shadow-sm"
+                >
+                  Reg
+                </button>
+              </div>
             </div>
-            <button className="hover:text-indigo-400 transition-colors flex flex-col items-center cursor-pointer">
-              <Coffee className="w-4 h-4" />
-              <span className="text-[7.5px] font-medium mt-0.5">Alimentar</span>
-            </button>
-            <button className="hover:text-emerald-400 transition-colors flex flex-col items-center cursor-pointer" onClick={() => triggerWaterReminderSim()}>
-              <Bell className="w-4 h-4" />
-              <span className="text-[7.5px] font-medium mt-0.5">Notificar</span>
-            </button>
-          </div>
-
+          </form>
         </div>
+
       </div>
+
     </div>
   );
 }

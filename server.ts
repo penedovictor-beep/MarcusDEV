@@ -156,6 +156,85 @@ const styles = StyleSheet.create({
   }
 });
 
+// Chat assistant endpoint using Gemini to help build excellent prompts
+app.post("/api/chat-assistant", async (req, res): Promise<any> => {
+  const { message, history = [], currentConfig = {} } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: "A mensagem é obrigatória." });
+  }
+
+  try {
+    const ai = getGenAI();
+    const systemInstruction = `Você é o Co-piloto de IA do VitaliSync, um tutor inteligente especializado em desenvolvimento de software mobile focado em saúde, IoT, wearables (smartwatches) e push notifications.
+O usuário Victor Penedo está projetando um aplicativo de saúde (Vitalis App/VitaliSync) com as seguintes configurações atuais:
+- Plataforma: ${currentConfig.platform || "iOS e Android"}
+- Framework: ${currentConfig.framework || "Expo"}
+- Smartwatch API: ${currentConfig.watchApi || "HealthKit/Google Fit"}
+- Notificações: ${currentConfig.notificationApi || "Notifee"}
+- Estilo: ${currentConfig.designFlavor || "Clean & Minimalista"}
+
+Ajude o usuário nas suas dúvidas, explique conceitos técnicos de conexão BLE, como contornar restrições de consumo de bateria em segundo plano no Android, regras de negócios para cálculos de hidratação progressiva e como estruturar essas orientações no prompt perfeito de IA.
+Mantenha suas respostas claras, ricas em dicas de codificação usando TypeScript e React Native, amigáveis e focadas no sucesso do desenvolvedor. Responda em português brasileiro.`;
+
+    // Map history elements into Gemini API structure
+    const formattedContents = history.map((item: any) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.text || item.content }],
+    }));
+
+    // Add current user message
+    formattedContents.push({
+      role: "user",
+      parts: [{ text: message }],
+    });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: formattedContents,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.75,
+      },
+    });
+
+    const reply = response.text || "Desculpe, não consegui formular uma resposta.";
+    return res.json({ reply });
+
+  } catch (error: any) {
+    console.error("Erro no chat assistant com Gemini:", error);
+
+    // Fallback response in Portuguese when API key is offline or errors out
+    let reply = "";
+    const lowerMsg = message.toLowerCase();
+    
+    if (lowerMsg.includes("bluetooth") || lowerMsg.includes("wearable") || lowerMsg.includes("relogio") || lowerMsg.includes("relógio")) {
+      reply = `**[Modo Simulação local]** Para integrar conexões Bluetooth e wearables no Expo, você deve usar a biblioteca \`react-native-ble-plx\` ou as APIs oficiais expostas pelas plataformas:
+1. **iOS (CoreBluetooth / HealthKit):** Requer inserção de chaves específicas de privacidade no seu \`app.json\` do Expo (como \`NSBluetoothAlwaysUsageDescription\`).
+2. **Android:** Necessita de permissões em tempo de execução para \`ACCESS_FINE_LOCATION\`, \`BLUETOOTH_CONNECT\` e \`BLUETOOTH_SCAN\` a partir da API 31+.
+Gostaria que eu adaptasse o prompt perfeito para focar em suporte Bluetooth avançado de baixa energia (BLE)?`;
+    } else if (lowerMsg.includes("notific") || lowerMsg.includes("push") || lowerMsg.includes("alarm")) {
+      reply = `**[Modo Simulação local]** Excelente ponto! Em aplicativos de saúde de alta fidelidade para idosos ou remédios, alarmes locais baseados em cronômetros que resistam ao reinício do aparelho são vitais:
+- No Android, use as APIs de **Notificações de Alarme Exatas (\`AndroidExactAlarms\`)** com Notifee, garantindo que o Android OS não mate a tarefa por otimização de bateria.
+- No iOS, notificações agendadas são tratadas localmente pelo \`UNUserNotificationCenter\` com alta precisão sob agendamento cíclico diário.`;
+    } else if (lowerMsg.includes("ia") || lowerMsg.includes("inteligência") || lowerMsg.includes("ajuda") || lowerMsg.includes("prompt")) {
+      reply = `**[Modo Simulação local]** Para que sua IA construa o App com perfeição, você deve adicionar ao seu prompt instruções claras sobre persistência e gerenciamento de estados:
+1. **Estilo arquitetal robusto:** Prefira separar serviços nativos (\`services/HealthKitService.ts\`, \`services/PushService.ts\`) de hooks visuais.
+2. **Definições rígidas de Tipo:** Certifique-se de instruir a outra IA a gerar interfaces completas em TypeScript (\`types.ts\`) para modelagem de remédios, logs alimentares e medições de batimento cardíaco.`;
+    } else {
+      reply = `**[Modo Simulação local]** Olá! Entendi sua dúvida sobre o desenvolvimento do app VitaliSync.
+Aqui estão 3 recomendações excelentes se você estiver usando **${currentConfig.framework || "Expo"}**:
+1. **Foco em Hooks de Estado:** Mantenha um hook robusto para sincronizar as metas diárias de hidratação (como \`useWaterTracker\`).
+2. **Integração Real-Time:** Planeje um serviço ou saga de escuta contínua de BPM (batimentos por minuto) simulados enquanto o sensor de smartwatch estiver conectado.
+3. **Persistência Segura:** Armazene os logs de remédios e consumo de líquidos via \`expo-secure-store\` para melhor eficiência.
+
+Como posso te ajudar a refinar o seu prompt ou código agora?`;
+    }
+
+    return res.json({ reply });
+  }
+});
+
 // Configure Vite middleware or static serving
 async function setupVite() {
   if (process.env.NODE_ENV !== "production") {

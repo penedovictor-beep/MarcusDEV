@@ -12,6 +12,8 @@ import {
   Cpu,
   Smartphone,
   Info,
+  MessageSquare,
+  Bot,
 } from "lucide-react";
 import { PromptOutput } from "../types";
 
@@ -35,6 +37,24 @@ export default function PromptStudio({ onAutoConfigureSimulatorWater }: PromptSt
   // active tab
   const [activeTab, setActiveTab] = useState<"prompt" | "architecture" | "permissions" | "code">("prompt");
   const [copiedStatus, setCopiedStatus] = useState<string | null>(null);
+
+  // Chat Co-pilot state of health assistant
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; role: 'user' | 'assistant'; text: string }>>([
+    {
+      id: "chat-1",
+      role: "assistant",
+      text: "Olá Victor! Sou o seu Co-piloto Especialista em Wearables e IoT para Saúde. Posso sanar as suas dúvidas sobre integração Bluetooth BLE, permissões do Apple HealthKit / Google Fit, ciclos com agendamentos Notifee, ou sugerir alterações no Prompt Perfeito. Como posso te apoiar?"
+    }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSubmitting, setChatSubmitting] = useState(false);
+
+  const suggestions = [
+    "Como ler batimentos cardíacos BLE de 10 em 10 seg?",
+    "Me dê um exemplo de alarme Notifee offline para remédios",
+    "Quais as permissões nativas para rodar em background?",
+    "Que biblioteca de gráficos usar no React Native + Expo?"
+  ];
 
   // Result output
   const [result, setResult] = useState<PromptOutput>({
@@ -135,6 +155,71 @@ const styles = StyleSheet.create({
     setTimeout(() => {
       setCopiedStatus(null);
     }, 1500);
+  };
+
+  const handleSendChatMessage = async (msgText: string) => {
+    if (!msgText.trim() || chatSubmitting) return;
+
+    const userMsg = {
+      id: String(Date.now()),
+      role: "user" as const,
+      text: msgText,
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput("");
+    setChatSubmitting(true);
+
+    try {
+      const history = chatMessages.map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
+      const res = await fetch("/api/chat-assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: msgText,
+          history,
+          currentConfig: {
+            platform,
+            framework,
+            watchApi,
+            notificationApi,
+            designFlavor,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro na comunicação com o assistente.");
+      }
+
+      const data = await res.json();
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: String(Date.now() + 1),
+          role: "assistant" as const,
+          text: data.reply,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: String(Date.now() + 1),
+          role: "assistant" as const,
+          text: "Ops! Sinto muito, tive um pequeno problema ao processar sua dúvida técnica. Pode tentar novamente em alguns segundos?",
+        },
+      ]);
+    } finally {
+      setChatSubmitting(false);
+    }
   };
 
   return (
@@ -438,6 +523,117 @@ const styles = StyleSheet.create({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* AI Copilot Chat Buddy */}
+          <div className="bg-slate-900/30 border border-slate-800 rounded-3xl p-5 mt-2 flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                  <MessageSquare className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>CO-PILOTO IA VITALISYNC</span>
+                    <span className="text-[8px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-widest font-mono select-none">
+                      Conectado
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium">Tire dúvidas de wearables, Notifee, BLE e aprimore o seu prompt perfeito</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Chat Box messages history list */}
+            <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-1 no-scrollbar text-left scroll-smooth">
+              {chatMessages.map((msg) => {
+                const isUser = msg.role === "user";
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-2.5 max-w-[90%] ${
+                      isUser ? "self-end flex-row-reverse" : "self-start"
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border select-none text-[9px] font-bold ${
+                        isUser
+                          ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                          : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
+                      }`}
+                    >
+                      {isUser ? "VP" : <Bot className="w-3 h-3" />}
+                    </div>
+                    <div
+                      className={`p-3 rounded-2xl text-[11px] leading-relaxed relative border ${
+                        isUser
+                          ? "bg-rose-500/[0.04] border-rose-500/15 text-slate-200 rounded-tr-none"
+                          : "bg-slate-950/70 border-slate-900 text-slate-300 rounded-tl-none font-sans"
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap select-text antialiased">
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {chatSubmitting && (
+                <div className="flex items-start gap-2.5 self-start">
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 animate-pulse">
+                    <Bot className="w-3 h-3" />
+                  </div>
+                  <div className="p-3 bg-slate-950/40 border border-slate-900 text-slate-500 text-[11px] rounded-2xl rounded-tl-none flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
+                    <span className="animate-pulse">Co-piloto está elaborando uma resposta...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Micro action prompt quick-suggestions */}
+            <div className="flex flex-wrap gap-1.5 py-1">
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendChatMessage(suggestion)}
+                  disabled={chatSubmitting}
+                  className="text-[9px] font-medium text-slate-400 bg-slate-950/40 border border-slate-850 hover:border-indigo-500/30 hover:text-indigo-300 hover:bg-slate-900/60 px-2.5 py-1 rounded-xl transition-all cursor-pointer text-left inline-block disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✨ {suggestion}
+                </button>
+              ))}
+            </div>
+
+            {/* Chat Input form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (chatInput.trim()) {
+                  handleSendChatMessage(chatInput);
+                }
+              }}
+              className="flex gap-2 bg-slate-950/60 rounded-xl p-1.5 border border-slate-900 focus-within:border-indigo-500/40 transition-all"
+            >
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={chatSubmitting}
+                placeholder="Pergunte ao Co-piloto (ex: Como configurar permissões de localização?)"
+                className="flex-1 bg-transparent border-none text-[11px] text-slate-200 outline-none px-3 py-1.5 placeholder-slate-650 disabled:text-slate-500"
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || chatSubmitting}
+                className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Perguntar</span>
+              </button>
+            </form>
+          </div>
         </div>
 
       </div>
